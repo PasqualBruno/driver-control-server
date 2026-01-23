@@ -1,0 +1,21 @@
+# dependencies
+/node_modules
+/dist
+
+# testing
+/coverage
+
+# production
+/build
+
+
+.env
+
+/prisma/dev.db           # Esse pode ignorar (é sqlite local, se usar)
+
+# supabase
+-supabase.db
+
+# Misc
+.DS_Store
+*.log

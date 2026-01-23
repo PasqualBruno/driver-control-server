@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+   url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password String
+  
+  // Auditoria (Saber quando criou e quando editou algo)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos (O Prisma usa isso para facilitar as buscas)
+  vehicles     Vehicle[]     // Um usuário pode ter vários veículos
+  transactions Transaction[] // Um usuário tem várias transações
+  maintenances Maintenance[] // Um usuário tem várias manutenções
+
+  @@map("users") // Cria a tabela com nome "users" no banco (padrão SQL é minúsculo e plural)
+}
+
+
+model Vehicle {
+  id           String   @id @default(uuid())
+  userId       String   // Chave Estrangeira (Quem é o dono?)
+  model        String   // Ex: "Onix Plus Turbo"
+  plate        String   // Ex: "ABC-1234"
+  currentKm    Int      @default(0) // O CAMPO MAIS IMPORTANTE
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relacionamentos
+  user         User          @relation(fields: [userId], references: [id])
+  maintenances Maintenance[] // Um carro tem várias manutenções
+  transactions Transaction[] // Um carro tem vários gastos/ganhos
+
+  @@map("vehicles")
+}
+
+
+model Transaction {
+  id          String            @id @default(uuid())
+  userId      String
+  vehicleId   String?
+  type        TransactionType   // INCOME ou EXPENSE
+  category    CategoryType
+  amount      Decimal           @db.Decimal(10, 2)
+  description String?
+  date        DateTime          @default(now())
+  kmAtTime    Int?
+  
+  // NOVO CAMPO:
+  status      TransactionStatus @default(COMPLETED) // Por padrão já vem pago/recebido
+  
+  createdAt   DateTime          @default(now())
+
+  user    User     @relation(fields: [userId], references: [id])
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+
+  @@map("transactions")
+}
+enum TransactionType {
+  INCOME   // Entrada
+  EXPENSE  // Saída
+}
+
+enum CategoryType {
+  RIDE_EARNING // Ganhos do App (Uber/99)
+  FUEL         // Abastecimento
+  MAINTENANCE  // Gastos com oficina
+  FOOD         // Alimentação durante o trabalho
+  INSURANCE    // Seguro
+  TAX          // IPVA/MEI
+  OTHER        // Outros
+}
+
+model Maintenance {
+  id              String            @id @default(uuid())
+  userId          String
+  vehicleId       String
+  itemName        String            // Ex: "Óleo do Motor", "Pneu"
+  lastChangedDate DateTime          // Quando trocou
+  lastChangedKm   Int               // Em qual KM trocou
+  nextChangeKm    Int?              // Próxima troca em X km
+  nextChangeDate  DateTime?         // Próxima troca em tal data
+  cost            Decimal?          @db.Decimal(10, 2)
+  status          MaintenanceStatus @default(PENDING) // Status novo
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@map("maintenances")
+}
+
+// Enum para o Status da Manutenção
+enum MaintenanceStatus {
+  OK       // Em dia
+  WARNING  // Perto de vencer
+  EXPIRED  // Venceu
+  PENDING  // Pendente de fazer
+}
+
+// Enum para o Status da Transação (que você usou no Transaction)
+enum TransactionStatus {
+  COMPLETED 
+  PENDING   
+}

@@ -1,0 +1,35 @@
+import { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
+
+interface TokenPayload {
+  id: string;
+  iat: number;
+  exp: number;
+}
+
+export function authMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const { authorization } = req.headers;
+
+  if (!authorization) {
+    return res.status(401).json({ error: "Token not found" });
+  }
+
+  const [, token] = authorization.split(" ");
+
+  try {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      return res.status(401).json({ error: "Secret not found" });
+    }
+
+    const decoded = jwt.verify(token, secret) as TokenPayload;
+    const { id } = decoded as TokenPayload;
+    req.userId = id;
+
+    next();
+  } catch (error) {}
+}
