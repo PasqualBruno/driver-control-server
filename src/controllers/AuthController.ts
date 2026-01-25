@@ -27,7 +27,7 @@ export async function checkEmail(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error(error); // Importante para você ver o erro no terminal
+    console.error(error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }
@@ -36,23 +36,19 @@ export async function register(req: Request, res: Response) {
   try {
     const { name, email, password } = req.body;
 
-    // Validação básica
     if (!name || !email || !password) {
       return res
         .status(400)
         .json({ error: "Name, email and password are required" });
     }
 
-    // Verifica duplicação
     const userExists = await findUserUnique(email);
     if (userExists) {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    // Hash da senha (pode falhar, então fica dentro do try)
     const hashedPassword = await bcrypt.hash(password, 8);
 
-    // Criação no banco
     await prisma.user.create({
       data: {
         name,
@@ -72,20 +68,16 @@ export async function login(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
 
-    // Busca usuário
     const user = await findUserUnique(email);
     if (!user)
       return res.status(400).json({ error: "Email ou senha inválidos" });
 
-    // Compara senha
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword)
       return res.status(400).json({ error: "Email ou senha inválidos" });
 
-    // Gera token
     const secret = process.env.JWT_SECRET;
     if (!secret) {
-      // Isso é um erro de configuração do servidor, logue como erro crítico
       console.error("ERRO CRÍTICO: JWT_SECRET não definido");
       return res.status(500).json({ error: "Erro interno de autenticação" });
     }
