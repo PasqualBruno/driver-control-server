@@ -1,19 +1,20 @@
 meta {
-  name: Login
+  name: Create
   type: http
-  seq: 3
+  seq: 1
 }
 
 post {
-  url: {{route}}/login
+  url: {{route}}
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "email": "pasqual@yopmail.com",
-    "password": "psfastpassql"
+    "model":"Sandero",
+    "plate":"abc1234",
+    "currentKm":10200
   }
 }
 
