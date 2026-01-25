@@ -1,9 +1,8 @@
 import bcrypt from "bcryptjs";
 import { Request, Response } from "express";
-import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
+import { HttpResponse } from "../utils/httpResponse";
 
-// Helper interno (não precisa de try/catch aqui se quem chama já trata)
 async function findUserUnique(email: string) {
   return await prisma.user.findUnique({
     where: { email },
@@ -15,7 +14,7 @@ export async function checkEmail(req: Request, res: Response) {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({ error: "Email is required" });
+      return HttpResponse.badRequest(res, "Email is required", "Error");
     }
 
     const user = await findUserUnique(email);
@@ -27,8 +26,7 @@ export async function checkEmail(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Internal server error" });
+    return HttpResponse.serverError(res, error);
   }
 }
 
@@ -37,16 +35,13 @@ export async function register(req: Request, res: Response) {
     const { name, email, password } = req.body;
 
     if (!name || !email || !password) {
-      return res
-        .status(400)
-        .json({ error: "Name, email and password are required" });
+      return HttpResponse.badRequest(res, "All fields are required", "Error");
     }
 
     const userExists = await findUserUnique(email);
     if (userExists) {
-      return res.status(400).json({ error: "User already exists" });
+      return HttpResponse.badRequest(res, "User already exists", "Error");
     }
-
     const hashedPassword = await bcrypt.hash(password, 8);
 
     await prisma.user.create({
@@ -57,36 +52,21 @@ export async function register(req: Request, res: Response) {
       },
     });
 
-    return res.status(201).json({ message: "User created successfully" });
+    return HttpResponse.created(res, "Success", "User created successfully");
   } catch (error) {
-    console.error("Register Error:", error);
-    return res.status(500).json({ error: "Falha ao criar conta" });
+    return HttpResponse.serverError(res, error);
   }
 }
 
 export async function login(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
-
-    const user = await findUserUnique(email);
-    if (!user)
-      return res.status(400).json({ error: "Email ou senha inválidos" });
-
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword)
-      return res.status(400).json({ error: "Email ou senha inválidos" });
-
-    const secret = process.env.JWT_SECRET;
-    if (!secret) {
-      console.error("ERRO CRÍTICO: JWT_SECRET não definido");
-      return res.status(500).json({ error: "Erro interno de autenticação" });
+    if (!email || !password) {
+      return HttpResponse.badRequest(res, "All fields are required", "Error");
     }
 
-    const token = jwt.sign({ id: user.id }, secret, { expiresIn: "7d" });
-
-    const { password: _, ...userWithoutPassword } = user;
-
-    return res.json({ user: userWithoutPassword, token });
+    const user = await findUserUnique(email);
+    if (!user) return HttpResponse.badRequest(res, "User not found", "Error");
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({ error: "Falha ao realizar login" });
