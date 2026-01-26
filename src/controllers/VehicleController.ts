@@ -1,15 +1,27 @@
 import { Request, Response } from "express";
+import { prisma } from "../lib/prisma";
+import { HttpResponse } from "../utils/httpResponse";
+
+interface ICreateDTO {
+  model: string;
+  plate: string;
+  currentKm: number;
+}
 
 export async function create(req: Request, res: Response) {
   const { model, plate, currentKm } = req.body;
-  console.log(req.userId);
 
   if (!req.userId) {
-    return res.status(400).json({ error: "Not authenticated" });
+    return HttpResponse.unauthorized(res);
   }
 
   if (!model || !plate || !currentKm) {
-    return res.status(400).json({ error: "Missing required fields" });
+    return HttpResponse.badRequest<ICreateDTO>(
+      res,
+      "All fields are required",
+      "Error",
+      { model, plate, currentKm },
+    );
   }
 
   try {
@@ -21,27 +33,37 @@ export async function create(req: Request, res: Response) {
         currentKm,
       },
     });
-    return res.status(201).json(vehicle);
+
+    return HttpResponse.created(
+      res,
+      vehicle,
+      "Success",
+      "Vehicle created successfully",
+    );
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Internal server error" });
+    return HttpResponse.serverError(res, error);
   }
 }
 
 export async function getUserVehicles(req: Request, res: Response) {
   if (!req.userId) {
-    return res.status(400).json({ error: "Not authenticated" });
+    return HttpResponse.unauthorized(res);
   }
+
   try {
     const vehicles = await prisma?.vehicle.findMany({
       where: {
         userId: req.userId,
       },
     });
-    return res.status(200).json(vehicles);
+    return HttpResponse.ok(
+      res,
+      vehicles,
+      "Success",
+      "Vehicles found successfully",
+    );
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Internal server error" });
+    return HttpResponse.serverError(res, error);
   }
 }
 
@@ -57,15 +79,19 @@ export async function updateVehicle(
   const { model, plate, currentKm } = req.body;
 
   if (!req.userId) {
-    return res.status(401).json({ error: "Not authenticated" });
+    return HttpResponse.unauthorized(res);
   }
 
   if (!vehicleId) {
-    return res.status(400).json({ error: "Vehicle ID is required" });
+    return HttpResponse.badRequest(res, "Vehicle ID is required", "Error");
   }
 
   if (!model && !plate && currentKm === undefined) {
-    return res.status(400).json({ error: "No data provided to update" });
+    return HttpResponse.badRequest(
+      res,
+      "At least one field is required",
+      "Error",
+    );
   }
 
   try {
@@ -80,10 +106,14 @@ export async function updateVehicle(
         currentKm,
       },
     });
-    return res.status(200).json(vehicle);
+    return HttpResponse.ok(
+      res,
+      vehicle,
+      "Success",
+      "Vehicle updated successfully",
+    );
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Internal server error" });
+    return HttpResponse.serverError(res, error);
   }
 }
 
@@ -92,24 +122,29 @@ export async function removeVehicle(
   res: Response,
 ) {
   const { vehicleId } = req.params;
+
+  if (!req.userId) {
+    return HttpResponse.unauthorized(res);
+  }
+
+  if (!vehicleId) {
+    return HttpResponse.badRequest(res, "Vehicle ID is required", "Error");
+  }
+
   try {
-    if (!req.userId) {
-      return res.status(400).json({ error: "Not authenticated" });
-    }
-
-    if (!vehicleId) {
-      return res.status(400).json({ error: "Vehicle ID is required" });
-    }
-
     const vehicle = await prisma?.vehicle.delete({
       where: {
         id: vehicleId,
         userId: req.userId,
       },
     });
-    return res.status(200).json(vehicle);
+    return HttpResponse.ok(
+      res,
+      vehicle,
+      "Success",
+      "Vehicle deleted successfully",
+    );
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Internal server error" });
+    return HttpResponse.serverError(res, error);
   }
 }
