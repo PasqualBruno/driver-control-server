@@ -1,0 +1,15 @@
+meta {
+  name: Vehicle
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjM1Y2IyZTc5LTIzNDItNGU5My1iZmY1LTY0NjE1MDFmMWM1MiIsImlhdCI6MTc2OTM2NjMwNiwiZXhwIjoxNzY5OTcxMTA2fQ.PUlZQst8ViHyEAQ5Cr0NeHovMaQMr-t1b-0kYOQASB4
+}
+
+vars:pre-request {
+  route: {{baseUrl}}/vehicles
+}

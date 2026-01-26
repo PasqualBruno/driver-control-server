@@ -1,0 +1,22 @@
+meta {
+  name: Update
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{route}}/4428cf2f-79c1-4744-b23c-a67aa03e17eb
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "currentKm": 10
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

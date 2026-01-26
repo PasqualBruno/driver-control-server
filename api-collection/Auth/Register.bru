@@ -1,0 +1,24 @@
+meta {
+  name: Register
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{route}}/register
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Pasqual",
+    "email": "pasqual@yopmail.com",
+    "password": "psfastpassql"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
