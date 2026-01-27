@@ -78,10 +78,11 @@ model Maintenance {
   userId          String
   vehicleId       String
   itemName        String
-  lastChangedDate DateTime
-  lastChangedKm   Int
-  nextChangeKm    Int?
+  controlBy       MaintenanceControl
+  lastChangedDate DateTime?
   nextChangeDate  DateTime?
+  lastChangedKm   Int?
+  nextChangeKm    Int?
   cost            Decimal?          @db.Decimal(10, 2)
   status          MaintenanceStatus @default(PENDING)
   createdAt       DateTime          @default(now())
@@ -91,6 +92,11 @@ model Maintenance {
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
 
   @@map("maintenances")
+}
+
+enum MaintenanceControl {
+  KM
+  TIME
 }
 
 enum MaintenanceStatus {

@@ -8,5 +8,6 @@ const routes = Router();
 routes.use("/auth", authRoutes);
 routes.use("/vehicles", vehicleRoutes);
 routes.use("/transactions", transactionRoutes);
+routes.use("/maintenances", transactionRoutes);
 
 export { routes };
