@@ -1,0 +1,26 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{route}}/87e74c7d-f5a8-4f0b-a690-4141a81ac146
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+        "type": "EXPENSE",
+        "category": "FUEL",
+        "amount": 100,
+        "description": "Gasto com combustível do turno",
+        "status": "COMPLETED"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
