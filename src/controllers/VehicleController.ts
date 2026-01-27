@@ -8,7 +8,7 @@ interface ICreateDTO {
   currentKm: number;
 }
 
-export async function create(req: Request, res: Response) {
+export async function create(req: Request<{}, {}, ICreateDTO>, res: Response) {
   const { model, plate, currentKm } = req.body;
 
   if (!req.userId) {

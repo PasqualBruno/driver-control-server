@@ -31,5 +31,7 @@ export function authMiddleware(
     req.userId = id;
 
     next();
-  } catch (error) {}
+  } catch (error) {
+    return res.status(401).json({ error: "Invalid token" });
+  }
 }
