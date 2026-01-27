@@ -3,63 +3,53 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-   url      = env("DATABASE_URL")
-   directUrl = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String
-  password String
-  
-  // Auditoria (Saber quando criou e quando editou algo)
+  password  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relacionamentos (O Prisma usa isso para facilitar as buscas)
-  vehicles     Vehicle[]     // Um usuário pode ter vários veículos
-  transactions Transaction[] // Um usuário tem várias transações
-  maintenances Maintenance[] // Um usuário tem várias manutenções
+  vehicles     Vehicle[]
+  transactions Transaction[]
+  maintenances Maintenance[]
 
-  @@map("users") // Cria a tabela com nome "users" no banco (padrão SQL é minúsculo e plural)
+  @@map("users")
 }
 
-
 model Vehicle {
-  id           String   @id @default(uuid())
-  userId       String   // Chave Estrangeira (Quem é o dono?)
-  model        String   // Ex: "Onix Plus Turbo"
-  plate        String   @unique @db.VarChar(7)
-  currentKm    Int      @default(0) // O CAMPO MAIS IMPORTANTE
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id        String   @id @default(uuid())
+  userId    String
+  model     String
+  plate     String   @unique @db.VarChar(7)
+  currentKm Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Relacionamentos
   user         User          @relation(fields: [userId], references: [id])
-  maintenances Maintenance[] // Um carro tem várias manutenções
-  transactions Transaction[] // Um carro tem vários gastos/ganhos
+  maintenances Maintenance[]
+  transactions Transaction[]
 
   @@map("vehicles")
 }
-
 
 model Transaction {
   id          String            @id @default(uuid())
   userId      String
   vehicleId   String?
-  type        TransactionType   // INCOME ou EXPENSE
+  type        TransactionType
   category    CategoryType
   amount      Decimal           @db.Decimal(10, 2)
   description String?
   date        DateTime          @default(now())
   kmAtTime    Int?
-  
-  // NOVO CAMPO:
-  status      TransactionStatus @default(COMPLETED) // Por padrão já vem pago/recebido
-  
+  status      TransactionStatus @default(COMPLETED)
   createdAt   DateTime          @default(now())
 
   user    User     @relation(fields: [userId], references: [id])
@@ -67,33 +57,33 @@ model Transaction {
 
   @@map("transactions")
 }
+
 enum TransactionType {
-  INCOME   // Entrada
-  EXPENSE  // Saída
+  INCOME
+  EXPENSE
 }
 
 enum CategoryType {
-  RIDE_EARNING // Ganhos do App (Uber/99)
-  FUEL         // Abastecimento
-  MAINTENANCE  // Gastos com oficina
-  FOOD         // Alimentação durante o trabalho
-  INSURANCE    // Seguro
-  TAX          // IPVA/MEI
-  OTHER        // Outros
+  RIDE_EARNING
+  FUEL
+  MAINTENANCE
+  FOOD
+  INSURANCE
+  TAX
+  OTHER
 }
 
 model Maintenance {
   id              String            @id @default(uuid())
   userId          String
   vehicleId       String
-  itemName        String            // Ex: "Óleo do Motor", "Pneu"
-  lastChangedDate DateTime          // Quando trocou
-  lastChangedKm   Int               // Em qual KM trocou
-  nextChangeKm    Int?              // Próxima troca em X km
-  nextChangeDate  DateTime?         // Próxima troca em tal data
+  itemName        String
+  lastChangedDate DateTime
+  lastChangedKm   Int
+  nextChangeKm    Int?
+  nextChangeDate  DateTime?
   cost            Decimal?          @db.Decimal(10, 2)
-  status          MaintenanceStatus @default(PENDING) // Status novo
-
+  status          MaintenanceStatus @default(PENDING)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
@@ -103,16 +93,14 @@ model Maintenance {
   @@map("maintenances")
 }
 
-// Enum para o Status da Manutenção
 enum MaintenanceStatus {
-  OK       // Em dia
-  WARNING  // Perto de vencer
-  EXPIRED  // Venceu
-  PENDING  // Pendente de fazer
+  OK
+  WARNING
+  EXPIRED
+  PENDING
 }
 
-// Enum para o Status da Transação (que você usou no Transaction)
 enum TransactionStatus {
-  COMPLETED 
-  PENDING   
+  COMPLETED
+  PENDING
 }

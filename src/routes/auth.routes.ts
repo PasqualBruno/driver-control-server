@@ -4,7 +4,7 @@ import {
   login,
   logout,
   register,
-} from "../controllers/AuthController";
+} from "../controllers/Auth/AuthController";
 
 const authRoutes = Router();
 

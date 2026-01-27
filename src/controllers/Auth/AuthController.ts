@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import { Request, Response } from "express";
-import { prisma } from "../lib/prisma";
-import { HttpResponse } from "../utils/httpResponse";
+import jwt from "jsonwebtoken";
+import { prisma } from "../../lib/prisma";
+import { HttpResponse } from "../../utils/httpResponse";
 
 async function findUserUnique(email: string) {
   return await prisma.user.findUnique({
@@ -67,6 +68,26 @@ export async function login(req: Request, res: Response) {
 
     const user = await findUserUnique(email);
     if (!user) return HttpResponse.badRequest(res, "User not found", "Error");
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return HttpResponse.badRequest(res, "Invalid password", "Error");
+    }
+
+    if (!process.env.JWT_SECRET) {
+      return HttpResponse.badRequest(res, "JWT_SECRET not found", "Error");
+    }
+
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    return HttpResponse.ok<{ token: string; userName: string }>(
+      res,
+      { token, userName: user.name },
+      "Success",
+      "Login realizado com sucesso",
+    );
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({ error: "Falha ao realizar login" });
