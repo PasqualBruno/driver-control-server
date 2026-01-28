@@ -19,8 +19,25 @@ model User {
   vehicles     Vehicle[]
   transactions Transaction[]
   maintenances Maintenance[]
+  shifts       Shift[] 
 
   @@map("users")
+}
+
+model Shift {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  userId    String
+  vehicleId String
+  shiftStatus ShiftStatus @default(OPEN)
+
+  user    User    @relation(fields: [userId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  transactions Transaction[]
+
+  @@map("shift")
 }
 
 model Vehicle {
@@ -35,6 +52,7 @@ model Vehicle {
   user         User          @relation(fields: [userId], references: [id])
   maintenances Maintenance[]
   transactions Transaction[]
+  shifts       Shift[]
 
   @@map("vehicles")
 }
@@ -43,17 +61,19 @@ model Transaction {
   id          String            @id @default(uuid())
   userId      String
   vehicleId   String?
+  shiftId     String?           
   type        TransactionType
-  category    CategoryType
-  amount      Decimal           @db.Decimal(10, 2)
   description String?
-  date        DateTime          @default(now())
+  category    CategoryType
   kmAtTime    Int?
+  amount      Decimal           @db.Decimal(10, 2)
   status      TransactionStatus @default(COMPLETED)
+  date        DateTime          @default(now())
   createdAt   DateTime          @default(now())
 
-  user    User     @relation(fields: [userId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
   vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+  shift   Shift?   @relation(fields: [shiftId], references: [id])
 
   @@map("transactions")
 }
@@ -79,6 +99,8 @@ model Maintenance {
   vehicleId       String
   itemName        String
   controlBy       MaintenanceControl
+  //TODO - Eu preciso colocar o valor de controle,
+  // Atualizar apenas os valores de acordo com o maintenanceControl
   lastChangedDate DateTime?
   nextChangeDate  DateTime?
   lastChangedKm   Int?
@@ -109,4 +131,10 @@ enum MaintenanceStatus {
 enum TransactionStatus {
   COMPLETED
   PENDING
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+  PAUSED
 }

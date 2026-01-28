@@ -7,6 +7,7 @@ export interface ITransactionCreateDTO {
   date: Date;
   kmAtTime?: number;
   status: TransactionStatus;
+  shiftId?: string;
 }
 
 export enum TransactionStatus {
