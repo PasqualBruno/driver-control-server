@@ -2,6 +2,7 @@ export interface CreateMaintenanceDTO {
   vehicleId: string;
   itemName: string;
   controlBy: MaintenanceControl;
+  controlValue: number;
   lastChangedDate?: string | Date;
   nextChangeDate?: string | Date;
   lastChangedKm?: number;

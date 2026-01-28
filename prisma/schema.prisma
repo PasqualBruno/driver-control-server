@@ -99,6 +99,7 @@ model Maintenance {
   vehicleId       String
   itemName        String
   controlBy       MaintenanceControl
+  controlValue    Int               @default(0)
   //TODO - Eu preciso colocar o valor de controle,
   // Atualizar apenas os valores de acordo com o maintenanceControl
   lastChangedDate DateTime?

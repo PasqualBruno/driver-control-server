@@ -1,3 +1,4 @@
+import { addDays } from "date-fns";
 import { Request, Response } from "express";
 import { prisma } from "../../lib/prisma";
 import { HttpResponse } from "../../utils/httpResponse";
@@ -14,33 +15,45 @@ export const createMaintenance = async (req: Request, res: Response) => {
       return HttpResponse.unauthorized(res);
     }
 
-    const vehicle = await prisma.vehicle.findUnique({
-      where: { id: data.vehicleId },
-    });
+    let calculatedNextDate = data.nextChangeDate
+      ? new Date(data.nextChangeDate)
+      : null;
 
-    if (!vehicle || vehicle.userId !== userId) {
-      return res
-        .status(404)
-        .json({ message: "Veículo não encontrado ou permissão negada" });
+    if (
+      data.controlBy === "TIME" &&
+      data.lastChangedDate &&
+      data.controlValue
+    ) {
+      calculatedNextDate = addDays(
+        new Date(data.lastChangedDate),
+        data.controlValue,
+      );
+    }
+    // -----------------------------------
+
+    // Lógica do KM (mantida igual)
+    let calculatedNextKm = data.nextChangeKm;
+    if (data.controlBy === "KM" && data.lastChangedKm && data.controlValue) {
+      calculatedNextKm = data.lastChangedKm + data.controlValue;
     }
 
     const maintenance = await prisma.maintenance.create({
       data: {
-        userId, // Vincula ao usuário logado
+        userId,
         vehicleId: data.vehicleId,
         itemName: data.itemName,
         controlBy: data.controlBy,
+        controlValue: data.controlValue,
         cost: data.cost,
         status: data.status || "PENDING",
-        // -- Opcionais
+
         lastChangedDate: data.lastChangedDate
           ? new Date(data.lastChangedDate)
           : null,
-        nextChangeDate: data.nextChangeDate
-          ? new Date(data.nextChangeDate)
-          : null,
-        lastChangedKm: data.lastChangedKm ? data.lastChangedKm : null,
-        nextChangeKm: data.nextChangeKm ? data.nextChangeKm : null,
+        nextChangeDate: calculatedNextDate,
+
+        lastChangedKm: data.lastChangedKm || null,
+        nextChangeKm: calculatedNextKm,
       },
     });
 
@@ -54,7 +67,6 @@ export const createMaintenance = async (req: Request, res: Response) => {
     return HttpResponse.serverError(res, error);
   }
 };
-
 export const getMaintenances = async (
   req: Request<{ vehicleId: string }>,
   res: Response,
