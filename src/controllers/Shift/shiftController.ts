@@ -2,7 +2,7 @@ import { ShiftStatus } from "@prisma/client";
 import { Request, Response } from "express";
 import { HttpResponse } from "../../utils/httpResponse";
 
-async function create(
+async function createShift(
   req: Request<{}, {}, { vehicleId: string }>,
   res: Response,
 ) {

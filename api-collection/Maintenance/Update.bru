@@ -1,0 +1,25 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{route}}/1957c6c1-fb51-423a-88fb-0ca3ecad1fe5
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "itemName": "Troca de Óleo (Sintético)",
+    "controlBy": "KM",
+    "controlValue": 10000,
+    "lastChangedKm": 1000
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

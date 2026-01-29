@@ -7,7 +7,7 @@ export interface CreateMaintenanceDTO {
   nextChangeDate?: string | Date;
   lastChangedKm?: number;
   nextChangeKm?: number;
-  cost?: number;
+  estimateCost?: number;
   status?: MaintenanceStatus;
 }
 

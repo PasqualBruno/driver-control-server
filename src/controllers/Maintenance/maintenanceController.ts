@@ -44,7 +44,7 @@ export const createMaintenance = async (req: Request, res: Response) => {
         itemName: data.itemName,
         controlBy: data.controlBy,
         controlValue: data.controlValue,
-        cost: data.cost,
+        estimateCost: data.estimateCost,
         status: data.status || "PENDING",
 
         lastChangedDate: data.lastChangedDate
@@ -67,7 +67,7 @@ export const createMaintenance = async (req: Request, res: Response) => {
     return HttpResponse.serverError(res, error);
   }
 };
-export const getMaintenances = async (
+export const getMaintenancesByCar = async (
   req: Request<{ vehicleId: string }>,
   res: Response,
 ) => {
@@ -92,6 +92,7 @@ export const getMaintenances = async (
       },
       include: {
         vehicle: { select: { model: true, plate: true } },
+        history: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -147,26 +148,110 @@ export const updateMaintenance = async (
     const userId = req.userId;
     if (!userId) return HttpResponse.unauthorized(res);
 
+    // 1. Busca dados atuais
     const existingMaintenance = await prisma.maintenance.findFirst({
       where: { id, userId },
+      include: { vehicle: true },
     });
 
     if (!existingMaintenance) {
-      return HttpResponse.notFound(res, "Error", "Manutenção nao encontrada");
+      return HttpResponse.notFound(res, "Error", "Manutenção não encontrada");
     }
 
-    const updatedMaintenance = await prisma.maintenance.update({
-      where: { id },
-      data: {
-        ...data,
+    // 2. Verifica se houve mudança de TIPO de controle
+    const isControlChanged =
+      data.controlBy && data.controlBy !== existingMaintenance.controlBy;
 
-        lastChangedDate: data.lastChangedDate
-          ? new Date(data.lastChangedDate)
-          : undefined,
-        nextChangeDate: data.nextChangeDate
-          ? new Date(data.nextChangeDate)
-          : undefined,
-      },
+    // --- TRAVA DE SEGURANÇA 1: Mudou o tipo? Exige valor novo. ---
+    if (isControlChanged && !data.controlValue) {
+      return HttpResponse.badRequest(
+        res,
+        "Dados incompletos",
+        `Você alterou o controle para ${data.controlBy}, então OBRIGATORIAMENTE precisa enviar o novo controlValue.`,
+      );
+    }
+
+    // --- TRAVA DE SEGURANÇA 2: Validação de KM ---
+    if (
+      data.lastChangedKm &&
+      data.lastChangedKm > existingMaintenance.vehicle.currentKm
+    ) {
+      return HttpResponse.badRequest(
+        res,
+        "Inconsistência",
+        `O KM informado (${data.lastChangedKm}) é maior que o KM atual do veículo.`,
+      );
+    }
+
+    const updatedMaintenance = await prisma.$transaction(async (tx) => {
+      // Deleta histórico se trocou de carro
+      if (data.vehicleId && data.vehicleId !== existingMaintenance.vehicleId) {
+        await tx.maintenanceHistory.deleteMany({
+          where: { maintenanceId: id },
+        });
+      }
+
+      // --- DEFINIÇÃO DOS VALORES PARA CÁLCULO ---
+
+      // Se mudou o tipo, a regra é: USA O NOVO e ignora o banco.
+      // Se NÃO mudou, aí sim podemos usar o do banco se o usuário não mandou nada.
+      const finalControlBy = data.controlBy ?? existingMaintenance.controlBy;
+
+      let finalControlValue: number;
+
+      if (isControlChanged) {
+        // REGRA DO USUÁRIO: Se mudou, pega o novo e fim de papo.
+        // O TS sabe que existe pq validamos no if lá em cima.
+        finalControlValue = data.controlValue!;
+      } else {
+        // Se não mudou o tipo, mantém o valor antigo se não vier novo.
+        finalControlValue =
+          data.controlValue ?? existingMaintenance.controlValue;
+      }
+
+      // Mesma lógica para as datas e KMs de referência
+      const finalLastKm =
+        data.lastChangedKm ?? existingMaintenance.lastChangedKm;
+      const finalLastDate = data.lastChangedDate
+        ? new Date(data.lastChangedDate)
+        : existingMaintenance.lastChangedDate;
+
+      // --- CÁLCULO DA PREVISÃO ---
+      let nextKm: number | null | undefined = data.nextChangeKm;
+      let nextDate: Date | null | undefined = data.nextChangeDate
+        ? new Date(data.nextChangeDate)
+        : undefined;
+
+      // Se temos um valor de intervalo configurado (e sabemos que ele é confiável)
+      if (finalControlValue) {
+        if (finalControlBy === "KM" && finalLastKm) {
+          nextKm = finalLastKm + finalControlValue;
+
+          // Se mudou o tipo, limpamos (null) a previsão de data antiga
+          if (isControlChanged) nextDate = null;
+        } else if (finalControlBy === "TIME" && finalLastDate) {
+          nextDate = addDays(new Date(finalLastDate), finalControlValue);
+
+          // Se mudou o tipo, limpamos (null) a previsão de KM antiga
+          if (isControlChanged) nextKm = null;
+        }
+      }
+
+      const updated = await tx.maintenance.update({
+        where: { id },
+        data: {
+          ...data,
+          lastChangedDate: data.lastChangedDate
+            ? new Date(data.lastChangedDate)
+            : undefined,
+
+          // Aplica os calculados
+          nextChangeKm: nextKm,
+          nextChangeDate: nextDate,
+        },
+      });
+
+      return updated;
     });
 
     return HttpResponse.ok(
@@ -176,7 +261,7 @@ export const updateMaintenance = async (
       "Manutenção atualizada com sucesso",
     );
   } catch (error) {
-    HttpResponse.serverError(res, error);
+    return HttpResponse.serverError(res, error);
   }
 };
 
@@ -190,29 +275,44 @@ export const deleteMaintenance = async (
     const userId = req.userId;
     if (!userId) return HttpResponse.unauthorized(res);
 
-    if (!id)
+    if (!id) {
       return HttpResponse.badRequest(
         res,
         "Error",
         "É necessário informar uma manutenção",
       );
+    }
 
-    const result = await prisma.maintenance.deleteMany({
+    const maintenance = await prisma.maintenance.findFirst({
       where: {
         id,
         userId,
       },
     });
 
-    if (result.count === 0) {
-      return HttpResponse.notFound(res, "Error", "Manutenção nao encontrada");
+    if (!maintenance) {
+      return HttpResponse.notFound(res, "Error", "Manutenção não encontrada");
     }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.maintenanceHistory.deleteMany({
+        where: {
+          maintenanceId: id,
+        },
+      });
+
+      await tx.maintenance.delete({
+        where: {
+          id,
+        },
+      });
+    });
 
     return HttpResponse.ok(
       res,
       null,
       "Sucesso",
-      "Manutenção deletada com sucesso",
+      "Manutenção e histórico deletados com sucesso",
     );
   } catch (error) {
     return HttpResponse.serverError(res, error);
