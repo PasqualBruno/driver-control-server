@@ -92,4 +92,20 @@ export class HttpResponse {
       data: null,
     } as ApiResponse<null>);
   }
+
+  /**
+   * 409 - Conflict (Regra de negócio / Já existe)
+   */
+  static conflict<T>(
+    res: Response,
+    title: string = "Conflito",
+    message: string = "Esta operação conflita com o estado atual dos dados.",
+    data: T | null = null,
+  ) {
+    return res.status(409).json({
+      title,
+      message,
+      data,
+    } as ApiResponse<T>);
+  }
 }

@@ -2,7 +2,7 @@ import { ShiftStatus } from "@prisma/client";
 import { Request, Response } from "express";
 import { HttpResponse } from "../../utils/httpResponse";
 
-async function createShift(
+export async function createShift(
   req: Request<{}, {}, { vehicleId: string }>,
   res: Response,
 ) {
@@ -14,7 +14,26 @@ async function createShift(
   }
 
   if (!vehicleId) {
-    return HttpResponse.badRequest(res, "Error", "Vehicle ID is required");
+    return HttpResponse.badRequest(
+      res,
+      "Erro",
+      "É necessário informar um veículo",
+    );
+  }
+
+  const isAnotherShiftOpen = await prisma?.shift.findFirst({
+    where: {
+      userId,
+      shiftStatus: "OPEN",
+    },
+  });
+
+  if (isAnotherShiftOpen) {
+    return HttpResponse.conflict(
+      res,
+      "Erro",
+      "Não é possível um turno enquanto outro estiver aberto",
+    );
   }
 
   try {
@@ -24,13 +43,21 @@ async function createShift(
         vehicleId,
       },
     });
-    return HttpResponse.created(res, shift, "Success", "Shift created");
+    return HttpResponse.created(
+      res,
+      shift,
+      "Sucesso",
+      "Turno iniciado com sucesso",
+    );
   } catch (error) {
     return HttpResponse.serverError(res, error);
   }
 }
 
-async function list(req: Request<{ vehicleId: string }>, res: Response) {
+export async function listShiftsByVehicle(
+  req: Request<{ vehicleId: string }>,
+  res: Response,
+) {
   const { userId } = req;
   const { vehicleId } = req.params;
 
@@ -48,14 +75,20 @@ async function list(req: Request<{ vehicleId: string }>, res: Response) {
         userId,
         vehicleId,
       },
+      include: { transactions: true },
     });
-    return HttpResponse.ok(res, shifts, "Success", "Shift list");
+    return HttpResponse.ok(
+      res,
+      shifts,
+      "Sucesso",
+      "Listagem de turnos encontrada",
+    );
   } catch (error) {
     return HttpResponse.serverError(res, error);
   }
 }
 
-async function getShiftDetails(
+export async function getShiftDetails(
   req: Request<{ shiftId: string }, {}, { id: string }>,
   res: Response,
 ) {
@@ -76,12 +109,13 @@ async function getShiftDetails(
         id: shiftId,
         userId,
       },
+      include: { transactions: true },
     });
     return HttpResponse.ok(res, shift, "Success", "Shift details");
   } catch (error) {}
 }
 
-async function update(
+export async function updateShift(
   req: Request<{ shiftId: string }, {}, { shiftStatus: ShiftStatus }>,
   res: Response,
 ) {
@@ -103,15 +137,25 @@ async function update(
         id: shiftId,
         userId,
       },
+
+      //TODO - Verificar a lógica de criar períodos dentro de um turno
+      // abrir - fechar --> Cria período
+      //Abrir - Pausar --> Cria um período completo automaticamente
+      //Pausar - abrir --> Inicia um turno que precisará ser fechado
+      //Pausar - fechar --> Não cria período
+
       data: {
         shiftStatus,
       },
     });
-    return HttpResponse.ok(res, shift, "Success", "Shift details");
+    return HttpResponse.ok(res, shift, "Sucesso", "Shift details");
   } catch (error) {}
 }
 
-async function deleteShift(req: Request<{ shiftId: string }>, res: Response) {
+export async function deleteShift(
+  req: Request<{ shiftId: string }>,
+  res: Response,
+) {
   const { userId } = req;
   const { shiftId } = req.params;
 
@@ -122,7 +166,7 @@ async function deleteShift(req: Request<{ shiftId: string }>, res: Response) {
   if (!shiftId) {
     return HttpResponse.badRequest(
       res,
-      "Error",
+      "Erro",
       "É necessário informar um turno",
     );
   }
@@ -134,7 +178,7 @@ async function deleteShift(req: Request<{ shiftId: string }>, res: Response) {
         userId,
       },
     });
-    return HttpResponse.ok(res, shift, "Success", "O turno foi deletado");
+    return HttpResponse.ok(res, shift, "Sucesso", "O turno foi deletado");
   } catch (error) {
     return HttpResponse.serverError(res, error);
   }
