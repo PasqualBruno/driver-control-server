@@ -171,6 +171,16 @@ export async function deleteShift(
     );
   }
 
+  //TODO - Testar enquanto usa o app se da para utilizar de forma correta as transactions sem shift.
+  await prisma?.transaction.updateMany({
+    where: {
+      shiftId,
+    },
+    data: {
+      shiftId: null,
+    },
+  });
+
   try {
     const shift = await prisma?.shift.delete({
       where: {
