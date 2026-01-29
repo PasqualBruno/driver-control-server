@@ -19,8 +19,25 @@ model User {
   vehicles     Vehicle[]
   transactions Transaction[]
   maintenances Maintenance[]
+  shifts       Shift[] 
 
   @@map("users")
+}
+
+model Shift {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  
+  userId    String
+  vehicleId String
+  shiftStatus ShiftStatus @default(OPEN)
+
+  user    User    @relation(fields: [userId], references: [id])
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  transactions Transaction[]
+
+  @@map("shift")
 }
 
 model Vehicle {
@@ -35,6 +52,7 @@ model Vehicle {
   user         User          @relation(fields: [userId], references: [id])
   maintenances Maintenance[]
   transactions Transaction[]
+  shifts       Shift[]
 
   @@map("vehicles")
 }
@@ -43,54 +61,68 @@ model Transaction {
   id          String            @id @default(uuid())
   userId      String
   vehicleId   String?
+  shiftId     String?           
+  description String?
+  kmAtTime    Int?
   type        TransactionType
   category    CategoryType
+  transactionNature TransactionNature
   amount      Decimal           @db.Decimal(10, 2)
-  description String?
-  date        DateTime          @default(now())
-  kmAtTime    Int?
   status      TransactionStatus @default(COMPLETED)
+  date        DateTime          @default(now())
   createdAt   DateTime          @default(now())
 
-  user    User     @relation(fields: [userId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
   vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+  shift   Shift?   @relation(fields: [shiftId], references: [id])
 
   @@map("transactions")
 }
 
-enum TransactionType {
-  INCOME
-  EXPENSE
-}
 
-enum CategoryType {
-  RIDE_EARNING
-  FUEL
-  MAINTENANCE
-  FOOD
-  INSURANCE
-  TAX
-  OTHER
-}
 
 model Maintenance {
   id              String            @id @default(uuid())
   userId          String
   vehicleId       String
   itemName        String
-  lastChangedDate DateTime
-  lastChangedKm   Int
-  nextChangeKm    Int?
+  controlBy       MaintenanceControl
+  controlValue    Int               @default(0)
+
+  lastChangedDate DateTime?
   nextChangeDate  DateTime?
-  cost            Decimal?          @db.Decimal(10, 2)
+  lastChangedKm   Int?
+  nextChangeKm    Int?
+  estimateCost            Decimal?          @db.Decimal(10, 2)
   status          MaintenanceStatus @default(PENDING)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+
+  history MaintenanceHistory[]
 
   user    User    @relation(fields: [userId], references: [id])
   vehicle Vehicle @relation(fields: [vehicleId], references: [id])
 
   @@map("maintenances")
+}
+
+model MaintenanceHistory {
+  id    String    @id @default(uuid())
+  paidPrice Decimal @db.Decimal(10,2)
+  mechanicShopName String?
+  date DateTime @default(now())
+
+  maintenanceId String 
+  maintenance Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("maintenanceHistory")
+}
+
+enum MaintenanceControl {
+  KM
+  TIME
 }
 
 enum MaintenanceStatus {
@@ -103,4 +135,30 @@ enum MaintenanceStatus {
 enum TransactionStatus {
   COMPLETED
   PENDING
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
+  PAUSED
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionNature {
+  PERSONAL
+  WORK
+}
+
+enum CategoryType {
+  RIDE_EARNING
+  FUEL
+  MAINTENANCE
+  FOOD
+  INSURANCE
+  TAX
+  OTHER 
 }

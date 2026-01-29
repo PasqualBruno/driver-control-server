@@ -1,0 +1,22 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{route}}/655bc01e-b05f-4049-975c-589bb1558689
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "shiftStatus": "PAUSED"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

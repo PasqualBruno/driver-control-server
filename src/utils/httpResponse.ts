@@ -45,8 +45,8 @@ export class HttpResponse {
    */
   static badRequest<T>(
     res: Response,
-    message: string = "Dados inválidos",
     title: string = "Atenção",
+    message: string = "Dados inválidos",
     data: T | null = null,
   ) {
     return res.status(400).json({
@@ -73,8 +73,8 @@ export class HttpResponse {
 
   static notFound(
     res: Response,
-    message: string = "Registro não encontrado",
     title: string = "Não encontrado",
+    message: string = "Registro não encontrado",
   ) {
     return res.status(404).json({
       title,
@@ -83,16 +83,29 @@ export class HttpResponse {
     } as ApiResponse<null>);
   }
 
-  /**
-   * 500 - Internal Server Error
-   */
   static serverError(res: Response, error?: any) {
-    if (error) console.error(error); // Loga o erro no terminal para você ver
+    if (error) console.error(error);
 
     return res.status(500).json({
       title: "Erro interno",
       message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
       data: null,
     } as ApiResponse<null>);
+  }
+
+  /**
+   * 409 - Conflict (Regra de negócio / Já existe)
+   */
+  static conflict<T>(
+    res: Response,
+    title: string = "Conflito",
+    message: string = "Esta operação conflita com o estado atual dos dados.",
+    data: T | null = null,
+  ) {
+    return res.status(409).json({
+      title,
+      message,
+      data,
+    } as ApiResponse<T>);
   }
 }

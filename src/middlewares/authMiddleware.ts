@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { HttpResponse } from "../utils/httpResponse";
 
 interface TokenPayload {
   id: string;
@@ -15,7 +16,7 @@ export function authMiddleware(
   const { authorization } = req.headers;
 
   if (!authorization) {
-    return res.status(401).json({ error: "Token not found" });
+    return HttpResponse.unauthorized(res);
   }
 
   const [, token] = authorization.split(" ");

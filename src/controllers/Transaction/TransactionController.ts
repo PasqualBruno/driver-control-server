@@ -12,8 +12,16 @@ export async function createTransaction(
   res: Response,
 ) {
   try {
-    const { vehicleId, type, category, amount, description, kmAtTime, status } =
-      req.body;
+    const {
+      vehicleId,
+      type,
+      category,
+      amount,
+      description,
+      kmAtTime,
+      status,
+      shiftId,
+    } = req.body;
 
     const userId = req.userId;
 
@@ -23,6 +31,15 @@ export async function createTransaction(
         "Categoria e tipo de transação são obrigatórios",
         "Error",
       );
+    }
+
+    if (shiftId) {
+      const shift = await prisma.shift.findFirst({
+        where: { id: shiftId },
+      });
+
+      if (!shift)
+        return HttpResponse.notFound(res, "Error", "Turno nao encontrado");
     }
 
     const transaction = await prisma.transaction.create({
@@ -35,6 +52,7 @@ export async function createTransaction(
         description,
         kmAtTime,
         status,
+        shiftId,
       },
     });
 
