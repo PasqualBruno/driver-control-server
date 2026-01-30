@@ -53,7 +53,7 @@ async function createHistory(
     await prisma.$transaction(async (tx) => {
       if (maintenance?.controlBy === MaintenanceControl.KM) {
         const isValidKm = vehicle.currentKm >= informedKm;
-        //logica: Aqui eu entendi uma mudança na regra de negócio, agora eu quero que valores maiores façam o valor do carro ser atualizado, e valores menores apenas criam o histórico e calcuelm a próxima data.  Vou ter que ver o que fazer caso adicione vários retroativos, se bem que acho um cenário muito improvável de acontecer
+        //logica: Aqui eu entendi uma mudança na regra de negócio, agora eu quero que valores maiores façam o valor do carro ser atualizado, e valores menores apenas criam o histórico e calcuelm a próxima data.   Vou ter que ver o que fazer caso adicione vários retroativos, se bem que acho um cenário muito improvável de acontecer
 
         if (!isValidKm) {
           return HttpResponse.badRequest(
