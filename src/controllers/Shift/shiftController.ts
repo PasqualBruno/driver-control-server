@@ -9,10 +9,6 @@ export async function createShift(
   const { userId } = req;
   const { vehicleId } = req.body;
 
-  if (!userId) {
-    return HttpResponse.unauthorized(res);
-  }
-
   if (!vehicleId) {
     return HttpResponse.badRequest(
       res,
@@ -61,10 +57,6 @@ export async function listShiftsByVehicle(
   const { userId } = req;
   const { vehicleId } = req.params;
 
-  if (!userId) {
-    return HttpResponse.unauthorized(res);
-  }
-
   if (!vehicleId) {
     return HttpResponse.badRequest(res, "Error", "Vehicle ID is required");
   }
@@ -95,10 +87,6 @@ export async function getShiftDetails(
   const { userId } = req;
   const { shiftId } = req.params;
 
-  if (!userId) {
-    return HttpResponse.unauthorized(res);
-  }
-
   if (!shiftId) {
     return HttpResponse.badRequest(res, "Error", "Shift ID is required");
   }
@@ -122,10 +110,6 @@ export async function updateShift(
   const { userId } = req;
   const { shiftId } = req.params;
   const { shiftStatus } = req.body;
-
-  if (!userId) {
-    return HttpResponse.unauthorized(res);
-  }
 
   if (!shiftId) {
     return HttpResponse.badRequest(res, "Error", "Shift ID is required");
@@ -158,10 +142,6 @@ export async function deleteShift(
 ) {
   const { userId } = req;
   const { shiftId } = req.params;
-
-  if (!userId) {
-    return HttpResponse.unauthorized(res);
-  }
 
   if (!shiftId) {
     return HttpResponse.badRequest(

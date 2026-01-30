@@ -66,7 +66,8 @@ model Transaction {
   kmAtTime    Int?
   type        TransactionType
   category    CategoryType
-  transactionNature TransactionNature
+
+  transactionNature TransactionNature @default(WORK)
   amount      Decimal           @db.Decimal(10, 2)
   status      TransactionStatus @default(COMPLETED)
   date        DateTime          @default(now())
@@ -108,13 +109,15 @@ model Maintenance {
 
 model MaintenanceHistory {
   id    String    @id @default(uuid())
-  paidPrice Decimal @db.Decimal(10,2)
-  mechanicShopName String?
   date DateTime @default(now())
 
   maintenanceId String 
-  maintenance Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+  paidPrice Decimal @db.Decimal(10,2)
+  mechanicShopName String?
+  informedKm Int 
+  observation String?
 
+  maintenance Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@map("maintenanceHistory")

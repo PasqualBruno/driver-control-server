@@ -11,10 +11,6 @@ export const createMaintenance = async (req: Request, res: Response) => {
   try {
     const userId = req.userId;
 
-    if (!userId) {
-      return HttpResponse.unauthorized(res);
-    }
-
     let calculatedNextDate = data.nextChangeDate
       ? new Date(data.nextChangeDate)
       : null;
@@ -75,8 +71,6 @@ export const getMaintenancesByCar = async (
     const userId = req.userId;
     const { vehicleId } = req.params;
 
-    if (!userId) return HttpResponse.unauthorized(res);
-
     if (!vehicleId) {
       return HttpResponse.badRequest(
         res,
@@ -115,9 +109,6 @@ export const getMaintenanceById = async (
 
   try {
     const userId = req.userId;
-    if (!req.userId) {
-      return HttpResponse.unauthorized(res);
-    }
 
     const maintenance = await prisma.maintenance.findFirst({
       where: {
@@ -146,9 +137,7 @@ export const updateMaintenance = async (
 
   try {
     const userId = req.userId;
-    if (!userId) return HttpResponse.unauthorized(res);
 
-    // 1. Busca dados atuais
     const existingMaintenance = await prisma.maintenance.findFirst({
       where: { id, userId },
       include: { vehicle: true },
@@ -158,7 +147,6 @@ export const updateMaintenance = async (
       return HttpResponse.notFound(res, "Error", "Manutenção não encontrada");
     }
 
-    // 2. Verifica se houve mudança de TIPO de controle
     const isControlChanged =
       data.controlBy && data.controlBy !== existingMaintenance.controlBy;
 
@@ -273,7 +261,6 @@ export const deleteMaintenance = async (
 
   try {
     const userId = req.userId;
-    if (!userId) return HttpResponse.unauthorized(res);
 
     if (!id) {
       return HttpResponse.badRequest(

@@ -11,10 +11,6 @@ interface ICreateDTO {
 export async function create(req: Request<{}, {}, ICreateDTO>, res: Response) {
   const { model, plate, currentKm } = req.body;
 
-  if (!req.userId) {
-    return HttpResponse.unauthorized(res);
-  }
-
   if (!model || !plate || !currentKm) {
     return HttpResponse.badRequest<ICreateDTO>(
       res,
@@ -46,10 +42,6 @@ export async function create(req: Request<{}, {}, ICreateDTO>, res: Response) {
 }
 
 export async function getUserVehicles(req: Request, res: Response) {
-  if (!req.userId) {
-    return HttpResponse.unauthorized(res);
-  }
-
   try {
     const vehicles = await prisma?.vehicle.findMany({
       where: {
@@ -77,10 +69,6 @@ export async function updateVehicle(
 ) {
   const { vehicleId } = req.params;
   const { model, plate, currentKm } = req.body;
-
-  if (!req.userId) {
-    return HttpResponse.unauthorized(res);
-  }
 
   if (!vehicleId) {
     return HttpResponse.badRequest(res, "Vehicle ID is required", "Error");
@@ -122,10 +110,6 @@ export async function removeVehicle(
   res: Response,
 ) {
   const { vehicleId } = req.params;
-
-  if (!req.userId) {
-    return HttpResponse.unauthorized(res);
-  }
 
   if (!vehicleId) {
     return HttpResponse.badRequest(res, "Vehicle ID is required", "Error");
