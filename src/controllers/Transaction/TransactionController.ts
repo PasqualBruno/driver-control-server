@@ -76,10 +76,6 @@ export async function listTransactions(
   try {
     const userId = req.userId;
 
-    if (!userId) {
-      return HttpResponse.unauthorized(res);
-    }
-
     const { day, month, year, vehicleId } = req.query;
 
     let whereClause: Prisma.TransactionWhereInput = {
@@ -138,10 +134,6 @@ export async function getTransactionById(
   try {
     const userId = req.userId;
     const { id } = req.params;
-
-    if (!userId) {
-      return HttpResponse.unauthorized(res);
-    }
 
     if (!id) {
       return HttpResponse.badRequest(res, "Transação não encontrada", "Error");
@@ -225,10 +217,6 @@ export async function deleteTransaction(
   try {
     const userId = req.userId;
     const { id } = req.params;
-
-    if (!userId) {
-      return HttpResponse.unauthorized(res);
-    }
 
     if (!id) {
       return HttpResponse.badRequest(res, "Transação não encontrada", "Error");
