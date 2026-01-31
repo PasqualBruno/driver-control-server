@@ -1,8 +1,15 @@
 meta {
   name: MaintenanceHistory
-  seq: 6
+}
+
+headers {
+  route: {{baseUrl}}/maintenances/history
 }
 
 auth {
   mode: inherit
+}
+
+vars:pre-request {
+  route: {{baseUrl}}/maintenances/history
 }

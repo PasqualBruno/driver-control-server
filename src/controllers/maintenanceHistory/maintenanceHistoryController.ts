@@ -10,7 +10,7 @@ import {
   IMaintenanceHistoryUpdateDTO,
 } from "./interfaces";
 
-async function createHistory(
+export async function createHistory(
   req: Request<{}, {}, IMaintenanceHistoryCreateDTO>,
   res: Response,
 ) {
@@ -52,19 +52,17 @@ async function createHistory(
 
     await prisma.$transaction(async (tx) => {
       if (maintenance?.controlBy === MaintenanceControl.KM) {
-        const isValidKm = vehicle.currentKm >= informedKm;
-        //logica: Aqui eu entendi uma mudança na regra de negócio, agora eu quero que valores maiores façam o valor do carro ser atualizado, e valores menores apenas criam o histórico e calcuelm a próxima data.   Vou ter que ver o que fazer caso adicione vários retroativos, se bem que acho um cenário muito improvável de acontecer
+        const isInformedKmHigher = informedKm > vehicle.currentKm;
 
-        if (!isValidKm) {
-          return HttpResponse.badRequest(
-            res,
-            "Erro",
-            "O km informado nao pode ser menor que o atual",
-          );
+        if (isInformedKmHigher) {
+          await tx.vehicle.update({
+            where: { id: vehicle.id, userId: req.userId },
+            data: { currentKm: informedKm },
+          });
         }
 
-        await prisma.maintenance.update({
-          where: { id: vehicle.id },
+        await tx.maintenance.update({
+          where: { id: maintenance.id },
           data: {
             nextChangeKm: informedKm + maintenance.controlValue,
             status: MaintenanceStatus.OK,
@@ -73,8 +71,8 @@ async function createHistory(
       }
 
       if (maintenance?.controlBy === MaintenanceControl.TIME) {
-        await prisma.maintenance.update({
-          where: { id: vehicle.id },
+        await tx.maintenance.update({
+          where: { id: maintenance.id },
           data: {
             nextChangeDate: new Date(
               new Date().getTime() +
@@ -85,7 +83,7 @@ async function createHistory(
         });
       }
 
-      await prisma?.maintenanceHistory.create({
+      await tx?.maintenanceHistory.create({
         data: {
           maintenanceId: req.body.maintenanceId,
           paidPrice: paidPrice,
@@ -102,12 +100,12 @@ async function createHistory(
   }
 }
 
-async function listHistory(
-  req: Request<{}, {}, { maintenanceId: string }>,
+export async function listHistory(
+  req: Request<{ maintenanceId: string }, {}, {}>,
   res: Response,
 ) {
   try {
-    const { maintenanceId } = req.body;
+    const { maintenanceId } = req.params;
 
     if (!maintenanceId)
       return HttpResponse.badRequest(
@@ -133,7 +131,7 @@ async function listHistory(
   }
 }
 
-async function historyDetails(
+export async function historyDetails(
   req: Request<{ historyId: string }, {}, {}>,
   res: Response,
 ) {
@@ -167,7 +165,7 @@ async function historyDetails(
   }
 }
 
-async function updateMaintenanceHistory(
+export async function updateMaintenanceHistory(
   req: Request<{ historyId: string }, {}, IMaintenanceHistoryUpdateDTO>,
   res: Response,
 ) {
@@ -210,7 +208,7 @@ async function updateMaintenanceHistory(
   }
 }
 
-async function deleteMaintenanceHistory(
+export async function deleteMaintenanceHistory(
   req: Request<{ historyId: string }, {}, {}>,
   res: Response,
 ) {
@@ -224,7 +222,7 @@ async function deleteMaintenanceHistory(
     );
 
   const history = await prisma.maintenanceHistory.findFirst({
-    where: { id: historyId },
+    where: { id: historyId, maintenance: { userId: req.userId } },
   });
 
   if (!history)
@@ -234,9 +232,6 @@ async function deleteMaintenanceHistory(
     await prisma.maintenanceHistory.delete({
       where: {
         id: historyId,
-        maintenance: {
-          userId: req.userId,
-        },
       },
     });
 

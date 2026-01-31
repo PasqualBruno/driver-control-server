@@ -1,0 +1,22 @@
+meta {
+  name: Update
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{route}}/ba899d28-9595-4b06-a012-f8dc0a59984e
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "paidPrice": 200
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
