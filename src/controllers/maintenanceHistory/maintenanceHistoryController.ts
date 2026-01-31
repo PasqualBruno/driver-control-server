@@ -5,9 +5,12 @@ import {
   MaintenanceControl,
   MaintenanceStatus,
 } from "../Maintenance/interface";
-import { IMaintenanceHistoryCreateDTO } from "./interfaces";
+import {
+  IMaintenanceHistoryCreateDTO,
+  IMaintenanceHistoryUpdateDTO,
+} from "./interfaces";
 
-async function createHistory(
+export async function createHistory(
   req: Request<{}, {}, IMaintenanceHistoryCreateDTO>,
   res: Response,
 ) {
@@ -21,7 +24,7 @@ async function createHistory(
     } = req.body;
 
     if (!maintenanceId)
-      HttpResponse.badRequest(
+      return HttpResponse.badRequest(
         res,
         "Erro",
         "A manutenção precisa ser informada",
@@ -40,7 +43,7 @@ async function createHistory(
     }
 
     const vehicle = await prisma.vehicle.findFirst({
-      where: { id: maintenance.vehicleId },
+      where: { id: maintenance.vehicleId, userId: req.userId },
     });
 
     if (!vehicle) {
@@ -49,18 +52,17 @@ async function createHistory(
 
     await prisma.$transaction(async (tx) => {
       if (maintenance?.controlBy === MaintenanceControl.KM) {
-        const isValidKm = vehicle.currentKm >= informedKm;
+        const isInformedKmHigher = informedKm > vehicle.currentKm;
 
-        if (!isValidKm) {
-          return HttpResponse.badRequest(
-            res,
-            "Erro",
-            "O km informado nao pode ser menor que o atual",
-          );
+        if (isInformedKmHigher) {
+          await tx.vehicle.update({
+            where: { id: vehicle.id, userId: req.userId },
+            data: { currentKm: informedKm },
+          });
         }
 
-        await prisma.maintenance.update({
-          where: { id: vehicle.id },
+        await tx.maintenance.update({
+          where: { id: maintenance.id },
           data: {
             nextChangeKm: informedKm + maintenance.controlValue,
             status: MaintenanceStatus.OK,
@@ -69,8 +71,8 @@ async function createHistory(
       }
 
       if (maintenance?.controlBy === MaintenanceControl.TIME) {
-        await prisma.maintenance.update({
-          where: { id: vehicle.id },
+        await tx.maintenance.update({
+          where: { id: maintenance.id },
           data: {
             nextChangeDate: new Date(
               new Date().getTime() +
@@ -81,7 +83,7 @@ async function createHistory(
         });
       }
 
-      await prisma?.maintenanceHistory.create({
+      await tx?.maintenanceHistory.create({
         data: {
           maintenanceId: req.body.maintenanceId,
           paidPrice: paidPrice,
@@ -91,32 +93,70 @@ async function createHistory(
         },
       });
     });
+
+    return HttpResponse.created(res, "Sucesso", "Histórico criado com sucesso");
   } catch (error) {
     HttpResponse.serverError(res);
   }
 }
 
-async function listHistory(
-  req: Request<{}, {}, { maintenanceId: string }>,
+export async function listHistory(
+  req: Request<{ maintenanceId: string }, {}, {}>,
   res: Response,
 ) {
   try {
-    const { maintenanceId } = req.body;
+    const { maintenanceId } = req.params;
 
     if (!maintenanceId)
-      HttpResponse.badRequest(
+      return HttpResponse.badRequest(
         res,
         "Erro",
         "A manutenção precisa ser informada",
       );
 
     const maintenanceHistory = await prisma.maintenanceHistory.findMany({
-      where: { maintenanceId },
+      where: { maintenanceId, maintenance: { userId: req.userId } },
     });
 
     return HttpResponse.ok(
       res,
       maintenanceHistory,
+      "Sucesso",
+      maintenanceHistory.length > 0
+        ? "Histórico da manutenção encontrado"
+        : "Nenhum histórico registrado para esta manutenção",
+    );
+  } catch (error) {
+    HttpResponse.serverError(res);
+  }
+}
+
+export async function historyDetails(
+  req: Request<{ historyId: string }, {}, {}>,
+  res: Response,
+) {
+  const { historyId } = req.params;
+
+  if (!historyId)
+    return HttpResponse.badRequest(
+      res,
+      "Erro",
+      "O histórico precisa ser informado",
+    );
+
+  try {
+    const history = await prisma.maintenanceHistory.findFirst({
+      where: { id: historyId, maintenance: { userId: req.userId } },
+      include: { maintenance: true },
+    });
+
+    if (!history) {
+      return HttpResponse.notFound(res, "Erro", "Histórico nao encontrado");
+    }
+
+    return HttpResponse.ok(
+      res,
+      history,
       "Sucesso",
       "Histórico da manutenção encontrado",
     );
@@ -125,8 +165,83 @@ async function listHistory(
   }
 }
 
-async function historyDetails(req: Request, res: Response) {
+export async function updateMaintenanceHistory(
+  req: Request<{ historyId: string }, {}, IMaintenanceHistoryUpdateDTO>,
+  res: Response,
+) {
   const { historyId } = req.params;
+
+  if (!historyId)
+    return HttpResponse.badRequest(
+      res,
+      "Erro",
+      "O histórico precisa ser informado",
+    );
+
+  const existingHistory = await prisma.maintenanceHistory.findFirst({
+    where: { id: historyId, maintenance: { userId: req.userId } },
+  });
+
+  if (!existingHistory) {
+    return HttpResponse.notFound(res, "Erro", "Histórico nao encontrado");
+  }
+
+  try {
+    const history = await prisma.maintenanceHistory.update({
+      where: { id: historyId },
+      data: {
+        paidPrice: req.body.paidPrice,
+        mechanicShopName: req.body.mechanicShopName,
+        informedKm: req.body.informedKm,
+        observation: req.body.observation,
+      },
+    });
+
+    return HttpResponse.ok(
+      res,
+      history,
+      "Sucesso",
+      "Histórico da manutenção atualizado",
+    );
+  } catch (error) {
+    HttpResponse.serverError(res);
+  }
 }
 
-async function updateMaintenanceHistory() {}
+export async function deleteMaintenanceHistory(
+  req: Request<{ historyId: string }, {}, {}>,
+  res: Response,
+) {
+  const { historyId } = req.params;
+
+  if (!historyId)
+    return HttpResponse.badRequest(
+      res,
+      "Erro",
+      "O histórico precisa ser informado",
+    );
+
+  const history = await prisma.maintenanceHistory.findFirst({
+    where: { id: historyId, maintenance: { userId: req.userId } },
+  });
+
+  if (!history)
+    return HttpResponse.notFound(res, "Erro", "Histórico nao encontrado");
+
+  try {
+    await prisma.maintenanceHistory.delete({
+      where: {
+        id: historyId,
+      },
+    });
+
+    return HttpResponse.ok(
+      res,
+      null,
+      "Sucesso",
+      "Histórico da manutenção deletado",
+    );
+  } catch (error) {
+    HttpResponse.serverError(res);
+  }
+}

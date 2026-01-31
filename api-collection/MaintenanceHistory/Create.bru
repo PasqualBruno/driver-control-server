@@ -1,0 +1,26 @@
+meta {
+  name: Create
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{route}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "maintenanceId": "44823730-15ff-4818-a81b-9422f42151bd",
+    "paidPrice": 450.75,
+    "mechanicShopName": "Auto Center Silva & Filhos",
+    "informedKm": 85500,
+    "observation": "Troca de óleo, filtro de ar e pastilhas de freio dianteiras."
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

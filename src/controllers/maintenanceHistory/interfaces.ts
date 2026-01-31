@@ -5,3 +5,5 @@ export interface IMaintenanceHistoryCreateDTO {
   mechanicShopName?: string;
   observation?: string;
 }
+
+export interface IMaintenanceHistoryUpdateDTO extends Partial<IMaintenanceHistoryCreateDTO> {}
