@@ -1,0 +1,29 @@
+meta {
+  name: Create (Personal)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{route}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "vehicleId": "7cfbcfb4-8b45-4eac-98e0-f7ee50faa0c3",
+    "type": "INCOME",
+    "transactionNature": "WORK",
+    "category": "RIDE_EARNING",
+    "amount": 200,
+    "description": "Dinheiro recebido das corridas da manhã",
+    "kmAtTime": 200,
+    "status": "COMPLETED"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
