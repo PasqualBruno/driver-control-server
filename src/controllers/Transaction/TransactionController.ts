@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, TransactionNature } from "@prisma/client";
 import { Request, Response } from "express";
 import { prisma } from "../../lib/prisma";
 import { HttpResponse } from "../../utils/httpResponse";
@@ -13,13 +13,12 @@ export async function createTransaction(
 ) {
   try {
     const {
-      vehicleId,
       type,
       category,
+      status,
+      transactionNature,
       amount,
       description,
-      kmAtTime,
-      status,
       shiftId,
     } = req.body;
 
@@ -28,30 +27,38 @@ export async function createTransaction(
     if (!type || !category || !amount) {
       return HttpResponse.badRequest(
         res,
+        "Erro",
         "Categoria e tipo de transação são obrigatórios",
-        "Error",
       );
     }
 
     if (shiftId) {
       const shift = await prisma.shift.findFirst({
-        where: { id: shiftId },
+        where: { id: shiftId, userId: req.userId },
       });
 
       if (!shift)
         return HttpResponse.notFound(res, "Error", "Turno nao encontrado");
     }
 
+    if (transactionNature === TransactionNature.WORK) {
+      if (!shiftId)
+        return HttpResponse.badRequest(
+          res,
+          "Erro",
+          "Transações relacionadas ao trabalho precisam informar um turno",
+        );
+    }
+
     const transaction = await prisma.transaction.create({
       data: {
         userId,
-        vehicleId,
         type,
         category,
+        transactionNature,
         amount,
-        description,
-        kmAtTime,
         status,
+        description,
         shiftId,
       },
     });
@@ -136,7 +143,7 @@ export async function getTransactionById(
     const { id } = req.params;
 
     if (!id) {
-      return HttpResponse.badRequest(res, "Transação não encontrada", "Error");
+      return HttpResponse.badRequest(res, "Erro", "Transação não encontrada");
     }
 
     const transaction = await prisma.transaction.findFirst({
@@ -150,7 +157,7 @@ export async function getTransactionById(
     });
 
     if (!transaction) {
-      return HttpResponse.notFound(res, "Transação não encontrada", "Error");
+      return HttpResponse.notFound(res, "Error", "Transação não encontrada");
     }
 
     return HttpResponse.ok(res, transaction, "Success", "Transação encontrada");
@@ -166,16 +173,8 @@ export async function updateTransaction(
   try {
     const userId = req.userId;
     const { id } = req.params;
-    const {
-      vehicleId,
-      type,
-      category,
-      amount,
-      description,
-      date,
-      kmAtTime,
-      status,
-    } = req.body;
+    const { type, category, amount, description, date, kmAtTime, status } =
+      req.body;
 
     const existingTransaction = await prisma.transaction.findFirst({
       where: { id, userId },
@@ -188,7 +187,6 @@ export async function updateTransaction(
     const updatedTransaction = await prisma.transaction.update({
       where: { id },
       data: {
-        vehicleId,
         type,
         category,
         amount,

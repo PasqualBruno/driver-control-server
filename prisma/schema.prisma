@@ -60,15 +60,16 @@ model Vehicle {
 model Transaction {
   id          String            @id @default(uuid())
   userId      String
+  type        TransactionType
+  category    CategoryType
+  transactionNature TransactionNature @default(WORK)
+  amount      Decimal           @db.Decimal(10, 2)
+  
   vehicleId   String?
   shiftId     String?           
   description String?
   kmAtTime    Int?
-  type        TransactionType
-  category    CategoryType
-
-  transactionNature TransactionNature @default(WORK)
-  amount      Decimal           @db.Decimal(10, 2)
+  
   status      TransactionStatus @default(COMPLETED)
   date        DateTime          @default(now())
   createdAt   DateTime          @default(now())

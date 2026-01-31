@@ -1,13 +1,19 @@
 export interface ITransactionCreateDTO {
-  vehicleId: string;
   type: TransactionType;
   category: CategoryType;
+  status: TransactionStatus;
+  transactionNature: TransactionNature;
   amount: number;
+
   description?: string;
   date: Date;
   kmAtTime?: number;
-  status: TransactionStatus;
   shiftId?: string;
+}
+
+export enum TransactionNature {
+  WORK = "WORK",
+  PERSONAL = "PERSONAL",
 }
 
 export enum TransactionStatus {
@@ -15,7 +21,7 @@ export enum TransactionStatus {
   PENDING = "PENDING",
 }
 
-enum TransactionType {
+export enum TransactionType {
   INCOME = "INCOME",
   EXPENSE = "EXPENSE",
 }
