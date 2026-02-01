@@ -222,6 +222,7 @@ export async function deleteTransaction(
 
     const count = await prisma.transaction.count({
       where: { id, userId },
+      //
     });
 
     if (count === 0) {
